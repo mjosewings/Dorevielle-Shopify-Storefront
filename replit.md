@@ -1,6 +1,6 @@
-# [Project name]
+# Dorévielle Storefront
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+An editorial storefront for Dorévielle, a women-in-tech lifestyle brand selling physical and digital products through Shopify-hosted checkout.
 
 ## Run & Operate
 
@@ -22,15 +22,24 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/dorevielle-storefront/src/pages/home.tsx` — storefront UI, product filtering, loading screen, cart drawer, and public chat surface.
+- `artifacts/dorevielle-storefront/src/index.css` — Dorévielle typography, blush/ink/cream visual system, motion, and responsive styling.
+- `artifacts/api-server/src/lib/shopifyStorefrontClient.ts` — server-only Shopify Storefront API connection and token refresh boundary.
+- `artifacts/api-server/src/routes/shopify.ts` — product, cart, and Shopify checkout API routes.
+- `lib/api-spec/openapi.yaml` — source of truth for generated Shopify API hooks and schemas.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Shopify is the system of record for products, inventory, carts, orders, and checkout; the app keeps no duplicate commerce catalog.
+- Buyer-facing Shopify calls stay behind the API server so connector settings never enter browser code.
+- Checkout redirects to Shopify-hosted checkout so Shopify Payments handles payment collection and sensitive checkout data.
+- The storefront keeps a local cart ID for continuity while Shopify owns cart contents and pricing.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Editorial Dorévielle storefront with live Shopify product listing and search/filter controls.
+- Shopify cart creation, line updates, removal, subtotal, and hosted checkout handoff.
+- First-visit or one-hour loading curtain, newsletter capture UI, and public chat entry point.
 
 ## User preferences
 
@@ -38,7 +47,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Shopify products must be active and published to a storefront-visible publication before they appear in the app.
+- Do not add product, inventory, or publication IDs by hand; resolve them from Shopify.
+- Do not collect payment information in this app; keep payment and shipping inside Shopify checkout.
 
 ## Pointers
 

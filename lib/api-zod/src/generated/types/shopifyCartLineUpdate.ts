@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface ShopifyCartLineUpdate {
+  /**
+     * @minimum 0
+     * @maximum 99
+     */
+  quantity: number;
 }

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: shopify
+    description: Shopify Storefront catalog and cart operations
 paths:
   /healthz:
     get:
@@ -24,7 +26,150 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /shopify/products:
+    get:
+      operationId: listShopifyProducts
+      tags: [shopify]
+      summary: List products from the connected Shopify store
+      parameters:
+        - name: first
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 12
+      responses:
+        "200":
+          description: Shopify products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopifyProduct"
+        "502":
+          description: Shopify Storefront API unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /shopify/cart:
+    post:
+      operationId: createShopifyCart
+      tags: [shopify]
+      summary: Create a Shopify cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopifyCartInput"
+      responses:
+        "201":
+          description: Created Shopify cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopifyCart"
+        "400":
+          description: Invalid cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /shopify/cart/{cartId}:
+    get:
+      operationId: getShopifyCart
+      tags: [shopify]
+      summary: Get a Shopify cart
+      parameters:
+        - $ref: "#/components/parameters/CartId"
+      responses:
+        "200":
+          description: Shopify cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopifyCart"
+        "404":
+          description: Cart not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /shopify/cart/{cartId}/lines:
+    post:
+      operationId: addShopifyCartLines
+      tags: [shopify]
+      summary: Add lines to a Shopify cart
+      parameters:
+        - $ref: "#/components/parameters/CartId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopifyCartLinesInput"
+      responses:
+        "200":
+          description: Updated Shopify cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopifyCart"
+  /shopify/cart/{cartId}/lines/{lineId}:
+    patch:
+      operationId: updateShopifyCartLine
+      tags: [shopify]
+      summary: Update a Shopify cart line quantity
+      parameters:
+        - $ref: "#/components/parameters/CartId"
+        - $ref: "#/components/parameters/LineId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopifyCartLineUpdate"
+      responses:
+        "200":
+          description: Updated Shopify cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopifyCart"
+    delete:
+      operationId: removeShopifyCartLine
+      tags: [shopify]
+      summary: Remove a Shopify cart line
+      parameters:
+        - $ref: "#/components/parameters/CartId"
+        - $ref: "#/components/parameters/LineId"
+      responses:
+        "200":
+          description: Updated Shopify cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopifyCart"
 components:
+  parameters:
+    CartId:
+      name: cartId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    LineId:
+      name: lineId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +178,133 @@ components:
           type: string
       required:
         - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    ShopifyProductImage:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        altText:
+          type: ["string", "null"]
+      required: [url, altText]
+    ShopifyProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        price:
+          type: number
+        currencyCode:
+          type: string
+        availableForSale:
+          type: boolean
+      required: [id, title, price, currencyCode, availableForSale]
+    ShopifyProduct:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        handle:
+          type: string
+        description:
+          type: string
+        image:
+          oneOf:
+            - $ref: "#/components/schemas/ShopifyProductImage"
+            - type: "null"
+        price:
+          type: number
+        currencyCode:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopifyProductVariant"
+      required: [id, title, handle, description, image, price, currencyCode, variants]
+    ShopifyCartLineInput:
+      type: object
+      properties:
+        merchandiseId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+      required: [merchandiseId, quantity]
+    ShopifyCartInput:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopifyCartLineInput"
+          minItems: 1
+      required: [lines]
+    ShopifyCartLinesInput:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopifyCartLineInput"
+          minItems: 1
+      required: [lines]
+    ShopifyCartLineUpdate:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 99
+      required: [quantity]
+    ShopifyCartLine:
+      type: object
+      properties:
+        id:
+          type: string
+        quantity:
+          type: integer
+        merchandiseId:
+          type: string
+        title:
+          type: string
+        variantTitle:
+          type: string
+        price:
+          type: number
+        currencyCode:
+          type: string
+        image:
+          oneOf:
+            - $ref: "#/components/schemas/ShopifyProductImage"
+            - type: "null"
+      required: [id, quantity, merchandiseId, title, variantTitle, price, currencyCode, image]
+    ShopifyCart:
+      type: object
+      properties:
+        id:
+          type: string
+        checkoutUrl:
+          type: string
+          format: uri
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopifyCartLine"
+        subtotal:
+          type: number
+        currencyCode:
+          type: string
+      required: [id, checkoutUrl, lines, subtotal, currencyCode]
 

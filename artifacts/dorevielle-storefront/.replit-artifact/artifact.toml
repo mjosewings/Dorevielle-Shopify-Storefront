@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Dorévielle Storefront"
+description = "A polished editorial storefront for Dorévielle, a women-in-tech lifestyle brand selling guidebooks, digital tools, desk objects, and apparel through Shopify-hosted checkout."
+version = "1.0.0"
+id = "artifacts/dorevielle-storefront"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19470
+
+[services.development]
+run = "pnpm --filter @workspace/dorevielle-storefront run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dorevielle-storefront", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dorevielle-storefront/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19470"
+BASE_PATH = "/"
