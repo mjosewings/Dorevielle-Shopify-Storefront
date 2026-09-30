@@ -196,7 +196,13 @@ router.post("/shopify/cart", async (req, res) => {
     const data = await shopifyStorefrontRequest<{
       cartCreate: { cart: ShopifyCartNode | null; userErrors: ShopifyUserError[] };
     }>(CART_CREATE_MUTATION, { lines: parsed.data.lines });
-    res.status(201).json(parseMutationCart(data.cartCreate.cart, data.cartCreate.userErrors));
+    res
+      .status(201)
+      .json(
+        parseMutationCart(data.cartCreate.cart, data.cartCreate.userErrors, {
+          requireAddedLine: true,
+        }),
+      );
   } catch (error) {
     handleShopifyError(req, res, error);
   }
@@ -236,7 +242,11 @@ router.post("/shopify/cart/:cartId/lines", async (req, res) => {
     const data = await shopifyStorefrontRequest<{
       cartLinesAdd: { cart: ShopifyCartNode | null; userErrors: ShopifyUserError[] };
     }>(CART_LINES_ADD_MUTATION, { cartId: params.data.cartId, lines: body.data.lines });
-    res.json(parseMutationCart(data.cartLinesAdd.cart, data.cartLinesAdd.userErrors));
+    res.json(
+      parseMutationCart(data.cartLinesAdd.cart, data.cartLinesAdd.userErrors, {
+        requireAddedLine: true,
+      }),
+    );
   } catch (error) {
     handleShopifyError(req, res, error);
   }
@@ -286,6 +296,7 @@ router.delete("/shopify/cart/:cartId/lines/:lineId", async (req, res) => {
 function parseMutationCart(
   cart: ShopifyCartNode | null,
   userErrors: ShopifyUserError[],
+  options: { requireAddedLine?: boolean } = {},
 ) {
   if (userErrors.length) {
     throw new ShopifyCartValidationError(
@@ -295,23 +306,31 @@ function parseMutationCart(
   if (!cart) {
     throw new Error("Shopify did not return a cart.");
   }
-  return normalizeCart(cart);
+  const normalizedCart = normalizeCart(cart);
+  if (options.requireAddedLine && normalizedCart.lines.length === 0) {
+    throw new ShopifyCartValidationError(
+      "That item is currently unavailable for sale.",
+    );
+  }
+  return normalizedCart;
 }
 
 function normalizeCart(cart: ShopifyCartNode) {
   return {
     id: cart.id,
     checkoutUrl: cart.checkoutUrl,
-    lines: cart.lines.nodes.map((line) => ({
-      id: line.id,
-      quantity: line.quantity,
-      merchandiseId: line.merchandise.id,
-      title: line.merchandise.product.title,
-      variantTitle: line.merchandise.title,
-      price: Number(line.merchandise.price.amount),
-      currencyCode: line.merchandise.price.currencyCode,
-      image: line.merchandise.product.featuredImage,
-    })),
+    lines: cart.lines.nodes
+      .filter((line) => line.quantity > 0)
+      .map((line) => ({
+        id: line.id,
+        quantity: line.quantity,
+        merchandiseId: line.merchandise.id,
+        title: line.merchandise.product.title,
+        variantTitle: line.merchandise.title,
+        price: Number(line.merchandise.price.amount),
+        currencyCode: line.merchandise.price.currencyCode,
+        image: line.merchandise.product.featuredImage,
+      })),
     subtotal: Number(cart.cost.subtotalAmount.amount),
     currencyCode: cart.cost.subtotalAmount.currencyCode,
   };
